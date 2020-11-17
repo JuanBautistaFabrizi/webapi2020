@@ -28,6 +28,7 @@ namespace TodoApi.Migrations
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
                     Name = table.Column<string>(nullable: true),
                     IsComplete = table.Column<bool>(nullable: false),
+                    Secret = table.Column<string>(nullable: true),
                     TodoItemListId = table.Column<long>(nullable: true)
                 },
                 constraints: table =>
