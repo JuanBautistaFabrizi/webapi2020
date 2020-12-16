@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TodoApi.Dtos;
 using TodoApi.Models;
+using TodoApi.Services;
 
 namespace TodoApi.Controllers
 {
@@ -18,10 +19,11 @@ namespace TodoApi.Controllers
     public class TodoListController : ControllerBase
     {
         private readonly TodoContext _context;
-
-        public TodoListController(TodoContext context)
+        private readonly ITodoListService _todoListService; 
+        public TodoListController(TodoContext context,ITodoListService todoListService)
         {
             _context = context;
+            _todoListService = todoListService;
         }
 
         // GET: api/TodoList
@@ -80,11 +82,7 @@ namespace TodoApi.Controllers
         [HttpPost]
         public async Task<ActionResult<TodoItemList>> PostTodoItemList(NewTodoItemListDTO todoItemListDTO)
         {
-            var todoItemList = new TodoItemList {
-                Name = todoItemListDTO.Name
-            };
-            _context.TodoItemLists.Add(todoItemList);
-            await _context.SaveChangesAsync();
+            var todoItemList = await _todoListService.CreateTodoItemListAsync(todoItemListDTO);
 
             return CreatedAtAction("GetTodoItemList", new { id = todoItemList.Id }, todoItemList);
         }
@@ -141,8 +139,8 @@ namespace TodoApi.Controllers
             return CreatedAtAction("PostTodoItemIntoList", new { id = todoItem.Id }, TodoController.ItemToDTO(todoItem));
         }
 
-        [HttpPut("{id}/todos/{todoId}")]
-        public async Task<IActionResult> PutTodoItemIntoList(long id, long todoId)
+        [HttpPost("{id}/todos/{todoId}")]
+        public async Task<IActionResult> AddTodoItemIntoList(long id, long todoId)
         {
 
             var todoItemList = await _context.TodoItemLists.FindAsync(id);

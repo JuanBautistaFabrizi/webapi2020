@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using TodoApi.Models;
+using TodoApi.Services;
 
 namespace TodoApi
 {
@@ -26,54 +27,41 @@ namespace TodoApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors(options =>
-            {
-                options.AddDefaultPolicy(
-                    builder =>
-                    {
-                        builder.AllowAnyOrigin()
-                            .AllowAnyMethod()
-                            .AllowAnyHeader();
-                    });
-            });
 
             services.AddDbContext<TodoContext>(opt => opt.UseMySQL(Configuration.GetConnectionString("DefaultConnection")));
-            
-            
-            
-            
+
+            services.AddScoped<ITodoItemService, TodoItemService>();
+            services.AddScoped<ITodoListService, TodoListService>();
+
+            //===== Add Identity ========
             services.AddIdentity<ApplicationUser, IdentityRole>()
-            .AddEntityFrameworkStores<TodoContext>()
-            .AddDefaultTokenProviders();
+                .AddEntityFrameworkStores<TodoContext>()
+                .AddDefaultTokenProviders();
 
             // ===== Add Jwt Authentication ========
-            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear(); // => remove default claims
             services
-        .AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme =
-        JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultScheme =
-        JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme =
-        JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(cfg =>
-        {
-            cfg.RequireHttpsMetadata = false;
-            cfg.SaveToken = true;
-            cfg.TokenValidationParameters = new
-        TokenValidationParameters
-            {
-                ValidIssuer = Configuration["JwtIssuer"],
-                ValidAudience = Configuration["JwtIssuer"],
-                IssuerSigningKey = new
-        SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtKey"])
-        ),
-                ClockSkew = TimeSpan.Zero
-            };
-        });
-            
+                .AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+                })
+                .AddJwtBearer(cfg =>
+                {
+                    cfg.RequireHttpsMetadata = false;
+                    cfg.SaveToken = true;
+                    cfg.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidIssuer = Configuration["JwtIssuer"],
+                        ValidAudience = Configuration["JwtIssuer"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtKey"])),
+                        ClockSkew = TimeSpan.Zero // remove delay of token when expire
+                    };
+                });
+
+
             services.AddControllers();
 
             // Register the Swagger generator, defining 1 or more Swagger documents
@@ -87,6 +75,13 @@ namespace TodoApi
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            // == CORS policies ==
+            app.UseCors(builder => {
+                builder.AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+            });
 
             app.UseHttpsRedirection();
 
@@ -102,8 +97,6 @@ namespace TodoApi
             });
 
             app.UseRouting();
-
-            app.UseCors();
 
             app.UseAuthorization();
 
